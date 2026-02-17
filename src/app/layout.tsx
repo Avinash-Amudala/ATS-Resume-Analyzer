@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/layout/AuthProvider";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { AdSenseHeader } from "@/components/ads/AdSense";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -162,37 +164,10 @@ export default function RootLayout({
       <head>
         <JsonLd />
         <OrganizationJsonLd />
-        {/* Google Analytics */}
-        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
-          <>
-            <script
-              async
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
-            />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}', {
-                    page_title: document.title,
-                    send_page_view: true
-                  });
-                `,
-              }}
-            />
-          </>
-        )}
-        {/* Google AdSense */}
-        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID &&
-          process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID !== "ca-pub-placeholder" && (
-            <script
-              async
-              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID}`}
-              crossOrigin="anonymous"
-            />
-          )}
+        {/* Google Analytics Component */}
+        <GoogleAnalytics />
+        {/* Google AdSense Component */}
+        <AdSenseHeader />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
