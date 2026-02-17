@@ -6,7 +6,7 @@ export async function callGroq(
   model: string = "llama-3.3-70b-versatile"
 ): Promise<{ text: string; tokensUsed: { prompt: number; completion: number } }> {
   if (!GROQ_API_KEY) {
-    throw new Error("Groq API key not configured");
+    throw new Error("Groq API key not configured - GROQ_API_KEY env var is missing");
   }
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {

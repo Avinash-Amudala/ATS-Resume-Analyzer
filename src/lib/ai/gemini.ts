@@ -9,7 +9,7 @@ async function sleep(ms: number) {
 export async function callGemini(
   systemPrompt: string,
   userPrompt: string,
-  model: string = "gemini-2.0-flash"
+  model: string = "gemini-2.5-flash"
 ): Promise<{ text: string; tokensUsed: { prompt: number; completion: number } }> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("Gemini API key not configured");
@@ -18,8 +18,9 @@ export async function callGemini(
   const maxRetries = 3;
   let lastError: Error | null = null;
 
-  // Try different models as fallbacks within Gemini
-  const models = [model, "gemini-1.5-flash", "gemini-1.5-flash-8b"];
+  // Gemini 2.5 Flash (paid tier) as primary, with 2.0 fallback
+  // Note: 1.5 models are deprecated — only use 2.x series
+  const models = [model, "gemini-2.0-flash", "gemini-2.0-flash-lite"];
 
   for (const modelName of models) {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -34,6 +35,7 @@ export async function callGemini(
         const text = response.text();
 
         const usage = response.usageMetadata;
+        console.log(`Gemini success: model=${modelName}, prompt=${usage?.promptTokenCount ?? 0}, completion=${usage?.candidatesTokenCount ?? 0}`);
         return {
           text,
           tokensUsed: {

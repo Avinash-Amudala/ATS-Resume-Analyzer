@@ -70,8 +70,8 @@ export function estimateCost(
   tokens: { prompt: number; completion: number }
 ): number {
   if (provider === "gemini") {
-    // Gemini 2.0 Flash pricing (per million tokens)
-    return (tokens.prompt * 0.1 + tokens.completion * 0.4) / 1_000_000;
+    // Gemini 2.5 Flash pricing (per million tokens)
+    return (tokens.prompt * 0.15 + tokens.completion * 0.6) / 1_000_000;
   }
   if (provider === "groq") {
     // Groq Llama pricing (per million tokens)
