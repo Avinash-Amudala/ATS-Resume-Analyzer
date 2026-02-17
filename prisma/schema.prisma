@@ -1,0 +1,120 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  name             String?
+  clerkId          String   @unique
+  plan             String   @default("free") // free | pro | lifetime
+  stripeCustomerId String?
+  scansToday       Int      @default(0)
+  downloadsToday   Int      @default(0)
+  optimizesToday   Int      @default(0)
+  scansResetAt     DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  resumes  Resume[]
+  scans    Scan[]
+  payments Payment[]
+}
+
+model Resume {
+  id              String  @id @default(uuid())
+  userId          String
+  name            String
+  originalFileUrl String?
+  rawText         String? @db.Text
+  parsedJson      String? @db.Text // JSON string of structured resume data
+  optimizedJson   String? @db.Text // JSON string of AI-optimized version
+  version         Int     @default(1)
+  createdAt       DateTime @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scans Scan[]
+}
+
+model Scan {
+  id              String   @id @default(uuid())
+  userId          String
+  resumeId        String
+  jdText          String   @db.Text
+  jdCompany       String?
+  detectedAts     String?
+  scoreTotal      Int      @default(0)
+  scoreBreakdown  String?  @db.Text // JSON string of 10 check scores
+  missingKeywords String?  @db.Text // JSON string of missing keywords array
+  createdAt       DateTime @default(now())
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume        Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  optimizations Optimization[]
+}
+
+model AtsCompany {
+  id             Int      @id @default(autoincrement())
+  companyName    String
+  companyDomain  String?
+  atsSystem      String
+  atsRules       String?  @db.Text // JSON string of company-specific rules
+  acceptsPdf     Boolean  @default(true)
+  acceptsDocx    Boolean  @default(true)
+  verified       Boolean  @default(false)
+  lastVerifiedAt DateTime?
+
+  @@index([companyName])
+}
+
+model AtsSystem {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  parsingType String // semantic | keyword | hybrid
+  rules       String? @db.Text // JSON string
+  tips        String? @db.Text // JSON string of tips array
+}
+
+model Template {
+  id              Int    @id @default(autoincrement())
+  name            String
+  description     String
+  previewImageUrl String?
+  styleConfig     String @db.Text // JSON string of style configuration
+  tier            String @default("free") // free | pro
+  sortOrder       Int    @default(0)
+}
+
+model Optimization {
+  id                String   @id @default(uuid())
+  scanId            String
+  aiModelUsed       String
+  promptTokens      Int      @default(0)
+  completionTokens  Int      @default(0)
+  costUsd           Float    @default(0)
+  originalSections  String?  @db.Text // JSON string
+  optimizedSections String?  @db.Text // JSON string
+  acceptedChanges   String?  @db.Text // JSON string
+  createdAt         DateTime @default(now())
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id              String   @id @default(uuid())
+  userId          String
+  stripePaymentId String?
+  amountUsd       Float
+  plan            String
+  status          String   @default("pending") // pending | completed | failed
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

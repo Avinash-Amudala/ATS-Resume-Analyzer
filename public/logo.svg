@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="96" fill="#2563EB"/>
+
+  <!-- Document shape -->
+  <rect x="58" y="38" width="72" height="92" rx="6" fill="white"/>
+
+  <!-- Folded corner -->
+  <path d="M110 38L130 58H116C112.686 58 110 55.314 110 52V38Z" fill="#BFDBFE"/>
+
+  <!-- Text lines on document -->
+  <rect x="70" y="68" width="48" height="4" rx="2" fill="#2563EB" opacity="0.6"/>
+  <rect x="70" y="80" width="40" height="4" rx="2" fill="#2563EB" opacity="0.4"/>
+  <rect x="70" y="92" width="44" height="4" rx="2" fill="#2563EB" opacity="0.3"/>
+  <rect x="70" y="104" width="36" height="4" rx="2" fill="#2563EB" opacity="0.2"/>
+
+  <!-- Checkmark circle (bottom right) -->
+  <circle cx="130" cy="130" r="28" fill="#10B981"/>
+  <path d="M118 130L126 138L142 122" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Score arc (bottom) -->
+  <path d="M60 156C60 156 80 170 100 170C120 170 140 156 140 156" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+</svg>
