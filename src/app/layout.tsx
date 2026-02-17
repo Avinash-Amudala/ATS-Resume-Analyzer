@@ -162,6 +162,29 @@ export default function RootLayout({
       <head>
         <JsonLd />
         <OrganizationJsonLd />
+        {/* Google Analytics */}
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}', {
+                    page_title: document.title,
+                    send_page_view: true
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
+        {/* Google AdSense */}
         {process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID &&
           process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID !== "ca-pub-placeholder" && (
             <script

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Zap, Loader2, CheckCircle, ArrowLeft, Crown, Download,
-  FileText, Lock
+  FileText, Lock, Trophy
 } from "lucide-react";
 
 interface OptimizedData {
@@ -66,6 +66,7 @@ export default function OptimizePage() {
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<number>(1);
   const [step, setStep] = useState<"optimize" | "template" | "done">("optimize");
+  const [newScore, setNewScore] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUsage = async () => {
@@ -120,6 +121,10 @@ export default function OptimizePage() {
       }
 
       setOptimized(data.data.optimized);
+      // Set new ATS score from backend re-scoring
+      if (data.data.newScore !== undefined) {
+        setNewScore(data.data.newScore);
+      }
       setStep("template"); // Move to template selection
 
       if (usage && !usage.isPro) {
@@ -277,14 +282,26 @@ export default function OptimizePage() {
         {/* STEP 2: Template Selection + Review */}
         {step === "template" && optimized && (
           <div className="space-y-8">
-            {/* Success banner */}
+            {/* Success banner with new score */}
             <Card className="border-green-200 bg-green-50">
-              <CardContent className="pt-6 flex items-center gap-3">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-                <div>
-                  <p className="font-medium">AI Optimization complete!</p>
-                  <p className="text-sm text-green-700">Choose a template below, then download your optimized resume.</p>
+              <CardContent className="pt-6 flex items-center gap-4">
+                <CheckCircle className="h-8 w-8 text-green-600 shrink-0" />
+                <div className="flex-1">
+                  <p className="font-semibold text-lg">AI Optimization Complete!</p>
+                  <p className="text-sm text-green-700">Your resume has been rewritten with targeted keywords. Choose a template below.</p>
                 </div>
+                {newScore !== null && (
+                  <div className="text-center shrink-0">
+                    <div className={`text-3xl font-bold ${
+                      newScore >= 90 ? "text-emerald-600" : newScore >= 70 ? "text-amber-600" : "text-red-600"
+                    }`}>
+                      {newScore}
+                    </div>
+                    <div className="text-xs text-green-700 flex items-center gap-1">
+                      <Trophy className="h-3 w-3" /> New ATS Score
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -424,12 +441,22 @@ export default function OptimizePage() {
             <CardContent className="pt-6 text-center">
               <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
               <h2 className="text-xl font-bold mb-2">Resume Downloaded!</h2>
+              {newScore !== null && (
+                <div className="mb-4">
+                  <span className={`text-4xl font-bold ${
+                    newScore >= 90 ? "text-emerald-600" : newScore >= 70 ? "text-amber-600" : "text-red-600"
+                  }`}>
+                    {newScore}
+                  </span>
+                  <p className="text-sm text-muted-foreground">Optimized ATS Score</p>
+                </div>
+              )}
               <p className="text-muted-foreground mb-6">
                 Your AI-optimized resume has been downloaded. Good luck with your application!
               </p>
               <div className="flex gap-4 justify-center">
                 <Button variant="outline" onClick={() => router.push(`/analyze/${params.scanId}`)}>
-                  View ATS Score
+                  View Original Score
                 </Button>
                 <Button onClick={() => router.push("/analyze")}>
                   Scan Another Resume

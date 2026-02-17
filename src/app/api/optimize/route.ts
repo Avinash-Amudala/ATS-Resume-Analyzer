@@ -6,7 +6,112 @@ import {
   RESUME_OPTIMIZATION_PROMPT,
   buildOptimizationUserPrompt,
 } from "@/lib/ai/prompts";
-import type { OptimizationResult } from "@/types";
+import { parseStructuredResume } from "@/lib/resume/structured";
+import { runATSScoring } from "@/lib/scoring";
+import type { OptimizationResult, StructuredResume } from "@/types";
+
+/**
+ * Merge OptimizationResult into StructuredResume for re-scoring.
+ */
+function mergeForScoring(
+  original: StructuredResume,
+  optimized: OptimizationResult
+): StructuredResume {
+  const merged = { ...original };
+
+  if (optimized.summary) {
+    merged.summary = optimized.summary;
+  }
+
+  if (Array.isArray(optimized.experience)) {
+    merged.experience = (merged.experience || []).map((exp) => {
+      const opt = optimized.experience.find((o) => o.company === exp.company);
+      if (opt?.bulletsRewritten?.length) {
+        return { ...exp, bullets: opt.bulletsRewritten };
+      }
+      return exp;
+    });
+  }
+
+  if (optimized.skills?.categoriesRewritten?.length) {
+    merged.skills = optimized.skills.categoriesRewritten;
+  }
+
+  return merged;
+}
+
+/**
+ * Re-build the resume text from structured data for scoring.
+ */
+function structuredToText(resume: StructuredResume): string {
+  const parts: string[] = [];
+
+  // Contact
+  if (resume.contact?.name) parts.push(resume.contact.name);
+  if (resume.contact?.email) parts.push(resume.contact.email);
+  if (resume.contact?.phone) parts.push(resume.contact.phone);
+  if (resume.contact?.linkedin) parts.push(resume.contact.linkedin);
+  if (resume.contact?.portfolio) parts.push(resume.contact.portfolio);
+  if (resume.contact?.location) parts.push(resume.contact.location);
+  parts.push("");
+
+  // Summary
+  if (resume.summary) {
+    parts.push("PROFESSIONAL SUMMARY");
+    parts.push(resume.summary);
+    parts.push("");
+  }
+
+  // Experience
+  if (resume.experience?.length) {
+    parts.push("EXPERIENCE");
+    for (const exp of resume.experience) {
+      parts.push(`${exp.company} | ${exp.title} | ${exp.startDate} - ${exp.endDate}`);
+      for (const bullet of exp.bullets) {
+        parts.push(`• ${bullet.replace(/^[•\-●]\s*/, "")}`);
+      }
+      parts.push("");
+    }
+  }
+
+  // Education
+  if (resume.education?.length) {
+    parts.push("EDUCATION");
+    for (const edu of resume.education) {
+      parts.push(`${edu.institution} | ${edu.degree}${edu.field ? ` in ${edu.field}` : ""} | ${edu.startDate} - ${edu.endDate}${edu.gpa ? ` | GPA: ${edu.gpa}` : ""}`);
+    }
+    parts.push("");
+  }
+
+  // Skills
+  if (resume.skills?.length) {
+    parts.push("SKILLS");
+    parts.push(resume.skills.join(", "));
+    parts.push("");
+  }
+
+  // Projects
+  if (resume.projects?.length) {
+    parts.push("PROJECTS");
+    for (const proj of resume.projects) {
+      parts.push(proj.name);
+      for (const bullet of proj.bullets) {
+        parts.push(`• ${bullet.replace(/^[•\-●]\s*/, "")}`);
+      }
+      parts.push("");
+    }
+  }
+
+  // Certifications
+  if (resume.certifications?.length) {
+    parts.push("CERTIFICATIONS");
+    for (const cert of resume.certifications) {
+      parts.push(`• ${cert}`);
+    }
+  }
+
+  return parts.join("\n");
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -104,11 +209,39 @@ export async function POST(req: NextRequest) {
     // Increment optimize count
     await incrementOptimizeCount(user.id);
 
+    // Re-score the optimized resume to give user the new ATS score
+    let newScore: number | undefined;
+    try {
+      const originalParsed = scan.resume.parsedJson
+        ? (JSON.parse(scan.resume.parsedJson) as StructuredResume)
+        : parseStructuredResume(scan.resume.rawText);
+
+      const mergedResume = mergeForScoring(originalParsed, optimized);
+      const optimizedText = structuredToText(mergedResume);
+
+      // Create a simple buffer for file format check (use original)
+      const fakeBuffer = Buffer.from(optimizedText, "utf-8");
+
+      const scoreResult = runATSScoring({
+        resumeText: optimizedText,
+        jdText: scan.jdText,
+        fileBuffer: fakeBuffer,
+        fileName: "resume.docx",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+      newScore = scoreResult.totalScore;
+    } catch (scoreError) {
+      console.error("Re-scoring error (non-fatal):", scoreError);
+      // Non-fatal - optimization still succeeds without score
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         optimizationId: optimization.id,
         optimized,
+        newScore,
       },
     });
   } catch (error) {

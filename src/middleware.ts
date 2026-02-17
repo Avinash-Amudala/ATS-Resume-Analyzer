@@ -9,6 +9,7 @@ const isProtectedRoute = createRouteMatcher([
   "/api/download(.*)",
   "/api/subscription(.*)",
   "/api/cover-letter(.*)",
+  "/api/admin(.*)",
 ]);
 
 const isPublicRoute = createRouteMatcher([
