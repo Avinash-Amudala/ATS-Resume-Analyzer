@@ -1,19 +1,19 @@
-const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 
-export async function callGroq(
+export async function callOpenAI(
   systemPrompt: string,
   userPrompt: string,
-  model: string = "llama-3.3-70b-versatile"
+  model: string = "gpt-4o-mini"
 ): Promise<{ text: string; tokensUsed: { prompt: number; completion: number } }> {
-  if (!GROQ_API_KEY) {
-    throw new Error("Groq API key not configured");
+  if (!OPENAI_API_KEY) {
+    throw new Error("OpenAI API key not configured");
   }
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_API_KEY}`,
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
     },
     body: JSON.stringify({
       model,
@@ -29,7 +29,7 @@ export async function callGroq(
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Groq API error: ${response.status} ${error.slice(0, 200)}`);
+    throw new Error(`OpenAI API error: ${response.status} ${error.slice(0, 200)}`);
   }
 
   const data = await response.json();

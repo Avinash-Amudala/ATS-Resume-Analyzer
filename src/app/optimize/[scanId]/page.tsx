@@ -105,8 +105,9 @@ export default function OptimizePage() {
           optimizesRemaining: Math.max(0, usage.optimizesRemaining - 1),
         });
       }
-    } catch {
-      setError("AI optimization failed. Please try again.");
+    } catch (err) {
+      console.error("Optimization fetch error:", err);
+      setError("Network error while optimizing. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }

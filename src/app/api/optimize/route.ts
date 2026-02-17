@@ -51,11 +51,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Scan not found." }, { status: 404 });
     }
 
-    const missingKeywords = scan.missingKeywords
-      ? JSON.parse(scan.missingKeywords).map(
-          (k: { keyword: string }) => k.keyword
-        )
-      : [];
+    let missingKeywords: string[] = [];
+    try {
+      missingKeywords = scan.missingKeywords
+        ? JSON.parse(scan.missingKeywords).map(
+            (k: { keyword: string }) => k.keyword
+          )
+        : [];
+    } catch (parseErr) {
+      console.warn("Failed to parse missingKeywords, using empty array:", parseErr);
+      missingKeywords = [];
+    }
 
     const userPrompt = buildOptimizationUserPrompt(
       scan.resume.rawText,
@@ -63,8 +69,22 @@ export async function POST(req: NextRequest) {
       missingKeywords
     );
 
-    const aiResult = await callAI(RESUME_OPTIMIZATION_PROMPT, userPrompt);
+    console.log(`Starting optimization for scan ${scanId}, resume length: ${scan.resume.rawText.length}, JD length: ${scan.jdText.length}, missing keywords: ${missingKeywords.length}`);
 
+    // Call AI provider (tries all configured providers with fallback)
+    let aiResult;
+    try {
+      aiResult = await callAI(RESUME_OPTIMIZATION_PROMPT, userPrompt);
+    } catch (aiError) {
+      const msg = aiError instanceof Error ? aiError.message : String(aiError);
+      console.error("All AI providers failed for optimization:", msg);
+      return NextResponse.json(
+        { error: "All AI services are currently unavailable. Please try again in a few minutes." },
+        { status: 503 }
+      );
+    }
+
+    // Parse the AI response into structured JSON
     let optimized: OptimizationResult;
     try {
       const parsed = parseAIJson<Omit<OptimizationResult, "modelUsed" | "tokensUsed">>(aiResult.text);
@@ -73,9 +93,12 @@ export async function POST(req: NextRequest) {
         modelUsed: aiResult.provider,
         tokensUsed: aiResult.tokensUsed,
       };
-    } catch {
+    } catch (jsonError) {
+      const msg = jsonError instanceof Error ? jsonError.message : String(jsonError);
+      console.error(`AI JSON parse failed (provider: ${aiResult.provider}):`, msg);
+      console.error("Raw AI response (first 500 chars):", aiResult.text.slice(0, 500));
       return NextResponse.json(
-        { error: "AI returned invalid response. Please try again." },
+        { error: "AI returned an invalid response format. Please try again." },
         { status: 502 }
       );
     }
@@ -104,6 +127,8 @@ export async function POST(req: NextRequest) {
     // Increment optimize count
     await incrementOptimizeCount(user.id);
 
+    console.log(`Optimization complete: scan=${scanId}, provider=${aiResult.provider}, cost=$${cost.toFixed(6)}`);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -112,7 +137,11 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Optimization error:", error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Optimization error:", msg);
+    if (error instanceof Error && error.stack) {
+      console.error("Stack trace:", error.stack);
+    }
     return NextResponse.json(
       { error: "AI optimization failed. Please try again in a few minutes." },
       { status: 500 }

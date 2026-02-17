@@ -1,8 +1,9 @@
 import { callGemini } from "./gemini";
 import { callKimi } from "./kimi";
 import { callGroq } from "./groq";
+import { callOpenAI } from "./openai";
 
-export type AIProvider = "gemini" | "kimi" | "groq";
+export type AIProvider = "gemini" | "openai" | "groq" | "kimi";
 
 interface AIResult {
   text: string;
@@ -13,6 +14,7 @@ interface AIResult {
 // Each provider function in priority order
 const providers: { name: AIProvider; call: (s: string, u: string, m?: string) => Promise<{ text: string; tokensUsed: { prompt: number; completion: number } }> }[] = [
   { name: "gemini", call: callGemini },
+  { name: "openai", call: callOpenAI },
   { name: "groq", call: callGroq },
   { name: "kimi", call: callKimi },
 ];
@@ -34,12 +36,14 @@ export async function callAI(
 
   for (const provider of orderedProviders) {
     try {
+      console.log(`Trying AI provider: ${provider.name}`);
       const result = await provider.call(systemPrompt, userPrompt, options?.model);
+      console.log(`AI provider ${provider.name} succeeded (${result.tokensUsed.prompt + result.tokensUsed.completion} tokens)`);
       return { ...result, provider: provider.name };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error(`AI provider ${provider.name} failed: ${msg.slice(0, 300)}`);
-      errors.push(`${provider.name}: ${msg.slice(0, 100)}`);
+      console.error(`AI provider ${provider.name} failed: ${msg.slice(0, 500)}`);
+      errors.push(`${provider.name}: ${msg.slice(0, 150)}`);
     }
   }
 
@@ -49,19 +53,57 @@ export async function callAI(
 }
 
 export function parseAIJson<T>(text: string): T {
-  // Remove markdown code blocks if present
+  // Step 1: Try direct parse first (handles clean JSON from JSON mode)
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // Continue to cleanup
+  }
+
   let cleaned = text.trim();
-  if (cleaned.startsWith("```json")) {
-    cleaned = cleaned.slice(7);
-  } else if (cleaned.startsWith("```")) {
-    cleaned = cleaned.slice(3);
-  }
-  if (cleaned.endsWith("```")) {
-    cleaned = cleaned.slice(0, -3);
-  }
+
+  // Step 2: Remove markdown code blocks if present (various formats)
+  // Handle ```json, ```JSON, ```javascript, or bare ```
+  cleaned = cleaned.replace(/^```(?:json|JSON|javascript|js)?\s*\n?/m, "");
+  cleaned = cleaned.replace(/\n?```\s*$/m, "");
   cleaned = cleaned.trim();
 
-  return JSON.parse(cleaned) as T;
+  // Step 3: Try parsing after stripping code blocks
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    // Continue to extraction
+  }
+
+  // Step 4: Extract JSON object from surrounding text
+  // Find the first { and the last matching }
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const jsonCandidate = cleaned.slice(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(jsonCandidate) as T;
+    } catch {
+      // Continue to final fallback
+    }
+  }
+
+  // Step 5: Try to find JSON array
+  const firstBracket = cleaned.indexOf("[");
+  const lastBracket = cleaned.lastIndexOf("]");
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    const jsonCandidate = cleaned.slice(firstBracket, lastBracket + 1);
+    try {
+      return JSON.parse(jsonCandidate) as T;
+    } catch {
+      // Fall through to error
+    }
+  }
+
+  // All parsing attempts failed
+  throw new Error(
+    `Failed to parse AI JSON response. First 200 chars: ${text.slice(0, 200)}`
+  );
 }
 
 // Estimate cost based on tokens used
@@ -72,6 +114,10 @@ export function estimateCost(
   if (provider === "gemini") {
     // Gemini 2.0 Flash pricing (per million tokens)
     return (tokens.prompt * 0.1 + tokens.completion * 0.4) / 1_000_000;
+  }
+  if (provider === "openai") {
+    // GPT-4o-mini pricing (per million tokens)
+    return (tokens.prompt * 0.15 + tokens.completion * 0.6) / 1_000_000;
   }
   if (provider === "groq") {
     // Groq Llama pricing (per million tokens)
