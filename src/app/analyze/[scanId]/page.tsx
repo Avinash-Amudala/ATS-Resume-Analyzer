@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle, XCircle, AlertTriangle, Zap, Loader2,
-  ArrowRight, Download, Building2, Shield, Crown, Info
+  ArrowRight, Building2, Crown, Info
 } from "lucide-react";
 import type { ScoringCheckResult, KeywordMatch } from "@/types";
 
@@ -45,8 +45,6 @@ export default function ResultsPage() {
   const router = useRouter();
   const [data, setData] = useState<ScanData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [downloadLoading, setDownloadLoading] = useState(false);
-  const [downloadError, setDownloadError] = useState("");
   const [usage, setUsage] = useState<UsageInfo | null>(null);
 
   useEffect(() => {
@@ -95,56 +93,6 @@ export default function ResultsPage() {
     fetchData();
   }, [params.scanId]);
 
-  const handleDownload = async (format: string) => {
-    if (!data) return;
-
-    // Check if user has downloads remaining
-    if (usage && !usage.isPro && typeof usage.downloadsLimit === "number" && usage.downloadsUsed >= usage.downloadsLimit) {
-      router.push("/pricing");
-      return;
-    }
-
-    setDownloadLoading(true);
-    setDownloadError("");
-
-    try {
-      const res = await fetch(`/api/download/${data.resumeId}?format=${format}`);
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        if (errorData.upgradeRequired) {
-          router.push("/pricing");
-          return;
-        }
-        setDownloadError(errorData.error || "Download failed.");
-        return;
-      }
-
-      // Download the file
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Resume_Optimized.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-
-      // Update local usage count
-      if (usage && !usage.isPro) {
-        setUsage({
-          ...usage,
-          downloadsUsed: usage.downloadsUsed + 1,
-        });
-      }
-    } catch {
-      setDownloadError("Download failed. Please try again.");
-    } finally {
-      setDownloadLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -167,10 +115,6 @@ export default function ResultsPage() {
       : data.totalScore >= 70
         ? "text-amber-500"
         : "text-red-500";
-
-  const downloadsRemaining = usage && !usage.isPro && typeof usage.downloadsLimit === "number"
-    ? Math.max(0, usage.downloadsLimit - usage.downloadsUsed)
-    : null;
 
   const optimizesRemaining = usage && !usage.isPro && typeof usage.optimizesLimit === "number"
     ? Math.max(0, usage.optimizesLimit - usage.optimizesUsed)
@@ -405,51 +349,6 @@ export default function ResultsPage() {
                       Optimize with AI <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Download */}
-            <Card>
-              <CardContent className="pt-6">
-                <Download className="h-6 w-6 text-muted-foreground mb-3" />
-                <h3 className="font-semibold mb-2">Download Resume</h3>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Download your optimized resume as DOCX or PDF.
-                </p>
-                {usage && !usage.isPro && (
-                  <p className="text-xs text-muted-foreground mb-3 font-medium">
-                    {downloadsRemaining !== null && downloadsRemaining > 0
-                      ? `${downloadsRemaining} free download${downloadsRemaining === 1 ? "" : "s"} left today`
-                      : downloadsRemaining === 0
-                        ? "No free downloads left today"
-                        : ""}
-                  </p>
-                )}
-                {downloadError && (
-                  <p className="text-sm text-red-600 mb-3">{downloadError}</p>
-                )}
-                {downloadsRemaining === 0 ? (
-                  <Link href="/pricing">
-                    <Button variant="outline" className="w-full">
-                      <Crown className="mr-2 h-4 w-4" /> Upgrade to Download
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    disabled={downloadLoading}
-                    onClick={() => handleDownload("docx")}
-                  >
-                    {downloadLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating...
-                      </>
-                    ) : (
-                      "Download DOCX"
-                    )}
-                  </Button>
                 )}
               </CardContent>
             </Card>

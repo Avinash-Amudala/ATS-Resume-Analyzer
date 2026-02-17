@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Loader2, Lock, Crown, CheckCircle } from "lucide-react";
+import { Loader2, Lock, Crown } from "lucide-react";
 
 interface TemplateItem {
   id: number;
@@ -21,25 +20,114 @@ interface TemplateItem {
   };
 }
 
+const SECTION_LABELS: Record<string, string> = {
+  contact: "Contact",
+  summary: "Summary",
+  experience: "Experience",
+  education: "Education",
+  skills: "Skills",
+  certifications: "Certifications",
+  projects: "Projects",
+};
+
+const TEMPLATE_SECTIONS: Record<number, string[]> = {
+  1: ["contact", "summary", "experience", "education", "skills", "certifications", "projects"],
+  2: ["contact", "summary", "experience", "education", "skills"],
+  3: ["contact", "summary", "experience", "skills", "certifications"],
+  4: ["contact", "summary", "experience", "projects", "skills"],
+  5: ["contact", "summary", "experience", "education", "certifications", "skills"],
+  6: ["contact", "summary", "education", "certifications", "experience", "skills", "projects"],
+  7: ["contact", "summary", "skills", "experience", "education", "projects"],
+  8: ["contact", "summary", "education", "projects", "skills", "experience", "certifications"],
+};
+
+function ResumePreview({
+  font,
+  color,
+  sections,
+}: {
+  font: string;
+  color: string;
+  sections: string[];
+}) {
+  return (
+    <div
+      className="w-full bg-white rounded shadow-inner border border-gray-200 p-3 overflow-hidden"
+      style={{ fontFamily: font, minHeight: 220 }}
+    >
+      {/* Name / Title area */}
+      <div className="text-center mb-2">
+        <div
+          className="h-2.5 rounded mx-auto mb-1"
+          style={{ width: "55%", backgroundColor: color }}
+        />
+        <div className="h-1.5 rounded bg-gray-300 mx-auto" style={{ width: "35%" }} />
+      </div>
+
+      {/* Contact line */}
+      <div className="flex justify-center gap-1 mb-2">
+        <div className="h-1 rounded bg-gray-200" style={{ width: "18%" }} />
+        <div className="h-1 rounded bg-gray-200" style={{ width: "22%" }} />
+        <div className="h-1 rounded bg-gray-200" style={{ width: "16%" }} />
+      </div>
+
+      <div className="border-t border-gray-100 my-1.5" />
+
+      {/* Sections */}
+      {sections
+        .filter((s) => s !== "contact")
+        .map((section) => (
+          <div key={section} className="mb-1.5">
+            {/* Section header */}
+            <div
+              className="h-1.5 rounded mb-1"
+              style={{
+                width: `${SECTION_LABELS[section]?.length ? SECTION_LABELS[section].length * 6 + 10 : 40}%`,
+                maxWidth: "60%",
+                minWidth: "20%",
+                backgroundColor: color,
+                opacity: 0.75,
+              }}
+            />
+            {/* Content lines */}
+            {section === "summary" ? (
+              <>
+                <div className="h-1 rounded bg-gray-200 mb-0.5" style={{ width: "95%" }} />
+                <div className="h-1 rounded bg-gray-200" style={{ width: "80%" }} />
+              </>
+            ) : (
+              <>
+                <div className="h-1 rounded bg-gray-200 mb-0.5" style={{ width: "90%" }} />
+                <div className="h-1 rounded bg-gray-100 mb-0.5" style={{ width: "75%" }} />
+                <div className="h-1 rounded bg-gray-100" style={{ width: "60%" }} />
+              </>
+            )}
+          </div>
+        ))}
+    </div>
+  );
+}
+
 export default function TemplatesPage() {
-  const router = useRouter();
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [userPlan, setUserPlan] = useState<string>("free");
 
   useEffect(() => {
-    // Fetch templates and subscription info in parallel
     Promise.all([
       fetch("/api/templates").then((r) => r.json()),
-      fetch("/api/subscription").then((r) => r.json()).catch(() => null),
-    ]).then(([templatesData, subData]) => {
-      if (templatesData.success) setTemplates(templatesData.data);
-      if (subData?.success) setUserPlan(subData.data.plan);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+      fetch("/api/subscription")
+        .then((r) => r.json())
+        .catch(() => null),
+    ])
+      .then(([templatesData, subData]) => {
+        if (templatesData.success) setTemplates(templatesData.data);
+        if (subData?.success) setUserPlan(subData.data.plan);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
-  // Fallback static templates if none in DB yet
   const staticTemplates = [
     { id: 1, name: "Classic Clean", description: "Maximum ATS compatibility with clean, single-column layout.", tier: "free", font: "Calibri", color: "#2563eb" },
     { id: 2, name: "Google SWE", description: "Compact, metric-heavy format optimized for FAANG applications.", tier: "pro", font: "Garamond", color: "#2563eb" },
@@ -54,27 +142,22 @@ export default function TemplatesPage() {
   const displayTemplates = templates.length > 0 ? templates : staticTemplates;
   const isPro = userPlan === "pro" || userPlan === "lifetime";
 
-  const handleTemplateClick = (tmpl: (typeof displayTemplates)[0]) => {
-    const isProTemplate = tmpl.tier === "pro";
+  const getFont = (tmpl: (typeof displayTemplates)[0]) =>
+    "font" in tmpl ? tmpl.font : tmpl.styleConfig?.font?.name ?? "sans-serif";
 
-    if (isProTemplate && !isPro) {
-      // Redirect to pricing for Pro templates
-      router.push("/pricing");
-    } else {
-      // Navigate to analyze page with template ID
-      router.push(`/analyze?template=${tmpl.id}`);
-    }
-  };
+  const getColor = (tmpl: (typeof displayTemplates)[0]) =>
+    "color" in tmpl ? tmpl.color : tmpl.styleConfig?.colors?.heading ?? "#2563eb";
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
 
       <main className="container mx-auto px-4 py-12 max-w-6xl">
+        {/* Page header */}
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold mb-2">Resume Templates</h1>
+          <h1 className="text-3xl font-bold mb-2">Template Gallery</h1>
           <p className="text-muted-foreground">
-            FAANG-proven templates optimized for specific ATS systems
+            Preview FAANG-proven resume templates optimized for specific ATS systems
           </p>
           {!isPro && (
             <div className="mt-4 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
@@ -90,6 +173,7 @@ export default function TemplatesPage() {
           )}
         </div>
 
+        {/* Template grid */}
         {loading ? (
           <div className="flex justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
@@ -99,61 +183,69 @@ export default function TemplatesPage() {
             {displayTemplates.map((tmpl) => {
               const isProTemplate = tmpl.tier === "pro";
               const isLocked = isProTemplate && !isPro;
+              const font = getFont(tmpl);
+              const color = getColor(tmpl);
+              const sections = TEMPLATE_SECTIONS[tmpl.id] ?? TEMPLATE_SECTIONS[1];
+
               return (
                 <Card
                   key={tmpl.id || tmpl.name}
-                  className={`overflow-hidden cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 ${
-                    isLocked ? "opacity-90" : ""
-                  }`}
-                  onClick={() => handleTemplateClick(tmpl)}
+                  className="overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1"
                 >
-                  <div
-                    className="h-48 flex items-center justify-center relative"
-                    style={{
-                      background: `linear-gradient(135deg, ${("color" in tmpl ? tmpl.color : "#2563eb")}15, ${("color" in tmpl ? tmpl.color : "#2563eb")}05)`,
-                    }}
-                  >
-                    <FileText
-                      className="h-16 w-16"
-                      style={{ color: "color" in tmpl ? tmpl.color : "#2563eb" }}
-                    />
+                  {/* Visual resume preview */}
+                  <div className="relative p-3 bg-gray-50">
+                    <ResumePreview font={font} color={color} sections={sections} />
+
+                    {/* Lock overlay for Pro templates */}
                     {isLocked && (
-                      <div className="absolute inset-0 bg-black/5 flex items-center justify-center">
-                        <div className="bg-white/90 rounded-full p-2">
-                          <Lock className="h-6 w-6 text-gray-500" />
+                      <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] flex items-center justify-center rounded-t">
+                        <div className="bg-white/90 rounded-full p-2.5 shadow-sm">
+                          <Lock className="h-5 w-5 text-gray-500" />
                         </div>
                       </div>
                     )}
+
+                    {/* Preview label */}
+                    <span className="absolute top-4 right-4 text-[10px] font-medium uppercase tracking-wider text-gray-400 bg-white/80 rounded px-1.5 py-0.5">
+                      Preview
+                    </span>
                   </div>
-                  <CardContent className="pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold">{tmpl.name}</h3>
+
+                  {/* Template info */}
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <h3 className="font-semibold text-sm">{tmpl.name}</h3>
                       {isProTemplate ? (
-                        <Badge variant="secondary">
-                          <Lock className="h-3 w-3 mr-1" /> Pro
+                        <Badge variant="secondary" className="text-xs">
+                          <Crown className="h-3 w-3 mr-1 text-yellow-500" /> Pro
                         </Badge>
                       ) : (
-                        <Badge variant="outline">Free</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Free
+                        </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-4">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       {tmpl.description}
                     </p>
-                    <Button
-                      variant={isLocked ? "default" : "outline"}
-                      className="w-full"
-                      size="sm"
-                    >
-                      {isLocked ? (
-                        <>
-                          <Crown className="h-3 w-3 mr-1" /> Unlock with Pro
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-3 w-3 mr-1" /> Use Template
-                        </>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {sections
+                        .filter((s) => s !== "contact")
+                        .slice(0, 5)
+                        .map((s) => (
+                          <span
+                            key={s}
+                            className="text-[10px] bg-gray-100 text-gray-500 rounded px-1.5 py-0.5"
+                          >
+                            {SECTION_LABELS[s]}
+                          </span>
+                        ))}
+                      {sections.filter((s) => s !== "contact").length > 5 && (
+                        <span className="text-[10px] bg-gray-100 text-gray-500 rounded px-1.5 py-0.5">
+                          +{sections.filter((s) => s !== "contact").length - 5} more
+                        </span>
                       )}
-                    </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );

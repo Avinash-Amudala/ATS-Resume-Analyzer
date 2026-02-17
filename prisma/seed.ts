@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Seed ATS Systems
+  // Seed ATS Systems (13 total)
   const atsSystems = [
     { name: "Greenhouse", parsingType: "semantic", rules: JSON.stringify({ prefersPdf: true, parsesLinks: true }), tips: JSON.stringify(["Use standard section headers", "PDF format preferred", "Keep formatting simple"]) },
     { name: "Lever", parsingType: "semantic", rules: JSON.stringify({ prefersPdf: true, parsesLinks: true }), tips: JSON.stringify(["Lever parses well - focus on content", "Standard headers work best", "PDF or DOCX accepted"]) },
@@ -13,6 +13,11 @@ async function main() {
     { name: "SuccessFactors", parsingType: "keyword", rules: JSON.stringify({ prefersPdf: false, parsesLinks: false }), tips: JSON.stringify(["Simple formatting only", "Avoid headers/footers", "Use standard section names"]) },
     { name: "Ashby", parsingType: "semantic", rules: JSON.stringify({ prefersPdf: true, parsesLinks: true }), tips: JSON.stringify(["Modern parser - most formats work", "Focus on content quality", "PDF recommended"]) },
     { name: "BambooHR", parsingType: "hybrid", rules: JSON.stringify({ prefersPdf: true, parsesLinks: false }), tips: JSON.stringify(["PDF preferred", "Standard section headers", "Avoid complex layouts"]) },
+    { name: "SmartRecruiters", parsingType: "semantic", rules: JSON.stringify({ prefersPdf: true, parsesLinks: true }), tips: JSON.stringify(["PDF and DOCX both parse well", "Modern semantic parser", "Standard section headers recommended", "Supports rich formatting"]) },
+    { name: "Jobvite", parsingType: "hybrid", rules: JSON.stringify({ prefersPdf: true, parsesLinks: true }), tips: JSON.stringify(["PDF or DOCX accepted", "Use standard section headers", "Keep formatting clean", "Social profile links are parsed"]) },
+    { name: "JazzHR", parsingType: "keyword", rules: JSON.stringify({ prefersPdf: true, parsesLinks: false }), tips: JSON.stringify(["Simple formatting recommended", "Avoid tables and columns", "Standard section headers required", "PDF preferred for consistent parsing"]) },
+    { name: "Breezy HR", parsingType: "hybrid", rules: JSON.stringify({ prefersPdf: true, parsesLinks: true }), tips: JSON.stringify(["PDF recommended", "Clean single-column layout", "Standard headers work best", "Links are parsed automatically"]) },
+    { name: "Recruitee", parsingType: "semantic", rules: JSON.stringify({ prefersPdf: true, parsesLinks: true }), tips: JSON.stringify(["Modern parser handles most formats", "PDF preferred", "Standard sections recommended", "Focus on content over formatting"]) },
   ];
 
   for (const system of atsSystems) {
@@ -23,58 +28,133 @@ async function main() {
     });
   }
 
-  // Seed ATS Companies (top 50)
+  // Seed ATS Companies (98 total across diverse industries)
   const companies = [
+    // ===== Big Tech =====
     { companyName: "Google", companyDomain: "google.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Meta", companyDomain: "meta.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Amazon", companyDomain: "amazon.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Apple", companyDomain: "apple.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Microsoft", companyDomain: "microsoft.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Netflix", companyDomain: "netflix.com", atsSystem: "Lever", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Stripe", companyDomain: "stripe.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Airbnb", companyDomain: "airbnb.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Uber", companyDomain: "uber.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Lyft", companyDomain: "lyft.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Tech - Enterprise / SaaS =====
     { companyName: "Salesforce", companyDomain: "salesforce.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Adobe", companyDomain: "adobe.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Oracle", companyDomain: "oracle.com", atsSystem: "Taleo", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "IBM", companyDomain: "ibm.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Intel", companyDomain: "intel.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "NVIDIA", companyDomain: "nvidia.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Tesla", companyDomain: "tesla.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "SpaceX", companyDomain: "spacex.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Cisco", companyDomain: "cisco.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "SAP", companyDomain: "sap.com", atsSystem: "SuccessFactors", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "ServiceNow", companyDomain: "servicenow.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Intuit", companyDomain: "intuit.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "VMware", companyDomain: "vmware.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Atlassian", companyDomain: "atlassian.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Tech - Consumer / Platform =====
+    { companyName: "Uber", companyDomain: "uber.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Lyft", companyDomain: "lyft.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Airbnb", companyDomain: "airbnb.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Stripe", companyDomain: "stripe.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Spotify", companyDomain: "spotify.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Shopify", companyDomain: "shopify.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Twitter/X", companyDomain: "x.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "LinkedIn", companyDomain: "linkedin.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Snap", companyDomain: "snap.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Pinterest", companyDomain: "pinterest.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Spotify", companyDomain: "spotify.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Shopify", companyDomain: "shopify.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "DoorDash", companyDomain: "doordash.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Instacart", companyDomain: "instacart.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Zoom", companyDomain: "zoom.us", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Slack", companyDomain: "slack.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Dropbox", companyDomain: "dropbox.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Tech - Data / Cloud / DevTools =====
     { companyName: "Databricks", companyDomain: "databricks.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Snowflake", companyDomain: "snowflake.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Palantir", companyDomain: "palantir.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Coinbase", companyDomain: "coinbase.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Block (Square)", companyDomain: "block.xyz", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Figma", companyDomain: "figma.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Notion", companyDomain: "notion.so", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Vercel", companyDomain: "vercel.com", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Anthropic", companyDomain: "anthropic.com", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "OpenAI", companyDomain: "openai.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Cloudflare", companyDomain: "cloudflare.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Datadog", companyDomain: "datadog.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "MongoDB", companyDomain: "mongodb.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "HashiCorp", companyDomain: "hashicorp.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Twilio", companyDomain: "twilio.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Atlassian", companyDomain: "atlassian.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Cisco", companyDomain: "cisco.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "VMware", companyDomain: "vmware.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Zoom", companyDomain: "zoom.us", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Slack", companyDomain: "slack.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Dropbox", companyDomain: "dropbox.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "DoorDash", companyDomain: "doordash.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
-    { companyName: "Instacart", companyDomain: "instacart.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Elastic", companyDomain: "elastic.co", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Confluent", companyDomain: "confluent.io", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Palantir", companyDomain: "palantir.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== AI / ML Startups =====
+    { companyName: "Anthropic", companyDomain: "anthropic.com", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "OpenAI", companyDomain: "openai.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Scale AI", companyDomain: "scale.com", atsSystem: "Lever", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Cohere", companyDomain: "cohere.com", atsSystem: "Lever", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Hugging Face", companyDomain: "huggingface.co", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Tech - Startups / Growth Stage =====
+    { companyName: "Vercel", companyDomain: "vercel.com", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Notion", companyDomain: "notion.so", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Figma", companyDomain: "figma.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Linear", companyDomain: "linear.app", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Retool", companyDomain: "retool.com", atsSystem: "Lever", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Supabase", companyDomain: "supabase.com", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Railway", companyDomain: "railway.app", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Loom", companyDomain: "loom.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Airtable", companyDomain: "airtable.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Fintech =====
+    { companyName: "Coinbase", companyDomain: "coinbase.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Block (Square)", companyDomain: "block.xyz", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Robinhood", companyDomain: "robinhood.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Plaid", companyDomain: "plaid.com", atsSystem: "Lever", acceptsPdf: true, acceptsDocx: true, verified: true },
     { companyName: "Ramp", companyDomain: "ramp.com", atsSystem: "Ashby", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Brex", companyDomain: "brex.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Aerospace / Defense / Hardware =====
+    { companyName: "Tesla", companyDomain: "tesla.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "SpaceX", companyDomain: "spacex.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Lockheed Martin", companyDomain: "lockheedmartin.com", atsSystem: "Taleo", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Boeing", companyDomain: "boeing.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Raytheon", companyDomain: "rtx.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Finance / Banking =====
+    { companyName: "JPMorgan Chase", companyDomain: "jpmorganchase.com", atsSystem: "Taleo", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Goldman Sachs", companyDomain: "goldmansachs.com", atsSystem: "iCIMS", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Morgan Stanley", companyDomain: "morganstanley.com", atsSystem: "Taleo", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Bank of America", companyDomain: "bankofamerica.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Citadel", companyDomain: "citadel.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Two Sigma", companyDomain: "twosigma.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Jane Street", companyDomain: "janestreet.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "D.E. Shaw", companyDomain: "deshaw.com", atsSystem: "iCIMS", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Capital One", companyDomain: "capitalone.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Consulting =====
+    { companyName: "McKinsey & Company", companyDomain: "mckinsey.com", atsSystem: "iCIMS", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "BCG", companyDomain: "bcg.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Bain & Company", companyDomain: "bain.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Deloitte", companyDomain: "deloitte.com", atsSystem: "SuccessFactors", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Accenture", companyDomain: "accenture.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "PwC", companyDomain: "pwc.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "EY", companyDomain: "ey.com", atsSystem: "SuccessFactors", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "KPMG", companyDomain: "kpmg.com", atsSystem: "Taleo", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Healthcare / Pharma =====
+    { companyName: "UnitedHealth Group", companyDomain: "unitedhealthgroup.com", atsSystem: "Taleo", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "CVS Health", companyDomain: "cvshealth.com", atsSystem: "iCIMS", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Pfizer", companyDomain: "pfizer.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Johnson & Johnson", companyDomain: "jnj.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Moderna", companyDomain: "modernatx.com", atsSystem: "Greenhouse", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Retail / Consumer =====
+    { companyName: "Walmart", companyDomain: "walmart.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Target", companyDomain: "target.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Costco", companyDomain: "costco.com", atsSystem: "SuccessFactors", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Nike", companyDomain: "nike.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Media / Entertainment =====
+    { companyName: "Disney", companyDomain: "thewaltdisneycompany.com", atsSystem: "SuccessFactors", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "Warner Bros. Discovery", companyDomain: "wbd.com", atsSystem: "Workday", acceptsPdf: true, acceptsDocx: true, verified: true },
+
+    // ===== Telecom / Energy =====
+    { companyName: "Verizon", companyDomain: "verizon.com", atsSystem: "Taleo", acceptsPdf: true, acceptsDocx: true, verified: true },
+    { companyName: "AT&T", companyDomain: "att.com", atsSystem: "Taleo", acceptsPdf: true, acceptsDocx: true, verified: true },
   ];
 
   for (const company of companies) {
@@ -107,7 +187,7 @@ async function main() {
     }
   }
 
-  console.log("Seed complete: 8 ATS systems, 50 companies, 8 templates");
+  console.log("Seed complete: 13 ATS systems, 98 companies, 8 templates");
 }
 
 main()

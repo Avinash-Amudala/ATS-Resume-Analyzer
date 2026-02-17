@@ -51,19 +51,29 @@ export function parseStructuredResume(rawText: string): StructuredResume {
 }
 
 function extractContact(text: string): ResumeContact {
-  const lines = text.split("\n").slice(0, 10);
+  // Check more lines (some resumes spread contact info over many lines)
+  const lines = text.split("\n").slice(0, 20);
   const topText = lines.join(" ");
+  const fullText = text;
 
   const emailMatch = topText.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
   const phoneMatch = topText.match(
     /(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}/
   );
-  const linkedinMatch = topText.match(
-    /https?:\/\/(www\.)?linkedin\.com\/in\/[a-z0-9-]+\/?/i
+  // Match LinkedIn with or without protocol
+  const linkedinMatch = fullText.match(
+    /(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-z0-9_-]+\/?/i
   );
-  const urlMatch = topText.match(
-    /https?:\/\/(?!.*linkedin)[^\s,]+/i
+  // Match GitHub
+  const githubMatch = fullText.match(
+    /(?:https?:\/\/)?(?:www\.)?github\.com\/[a-z0-9_-]+\/?/i
   );
+  // Match other portfolio/website URLs (not LinkedIn/GitHub)
+  const allUrls = fullText.match(/(?:https?:\/\/)[^\s,)]+/gi) || [];
+  const portfolioUrl = allUrls.find(
+    (u) => !u.toLowerCase().includes("linkedin.com") && !u.toLowerCase().includes("github.com")
+  );
+
   const locationMatch = topText.match(
     /(?:^|\s)([A-Z][a-z]+(?:\s[A-Z][a-z]+)?,\s*[A-Z]{2})\b/
   );
@@ -76,7 +86,7 @@ function extractContact(text: string): ResumeContact {
     email: emailMatch?.[0] || "",
     phone: phoneMatch?.[0] || "",
     linkedin: linkedinMatch?.[0] || "",
-    portfolio: urlMatch?.[0] || "",
+    portfolio: portfolioUrl || githubMatch?.[0] || "",
     location: locationMatch?.[1] || "",
   };
 }

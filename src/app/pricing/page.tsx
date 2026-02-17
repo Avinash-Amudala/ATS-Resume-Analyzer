@@ -6,22 +6,34 @@ import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Zap, Star, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { CheckCircle, Zap, Star, Loader2, Tag } from "lucide-react";
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
+  const [showPromoInput, setShowPromoInput] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoError, setPromoError] = useState("");
 
   const handleCheckout = async (plan: string) => {
     setLoading(plan);
+    setPromoError("");
     try {
+      const body: Record<string, string> = { action: "checkout", plan };
+      if (promoCode.trim()) {
+        body.promoCode = promoCode.trim();
+      }
+
       const res = await fetch("/api/subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "checkout", plan }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.success && data.data.url) {
         window.location.href = data.data.url;
+      } else if (data.error) {
+        setPromoError(data.error);
       }
     } catch {
       // Handle error
@@ -168,6 +180,54 @@ export default function PricingPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Promo Code Section */}
+        <div className="mt-8 text-center">
+          {!showPromoInput ? (
+            <button
+              onClick={() => setShowPromoInput(true)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+            >
+              <Tag className="h-3.5 w-3.5" />
+              Have a promo code?
+            </button>
+          ) : (
+            <div className="max-w-sm mx-auto space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Enter promo code"
+                  value={promoCode}
+                  onChange={(e) => {
+                    setPromoCode(e.target.value.toUpperCase());
+                    setPromoError("");
+                  }}
+                  className="text-center uppercase tracking-wider"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowPromoInput(false);
+                    setPromoCode("");
+                    setPromoError("");
+                  }}
+                  className="text-muted-foreground"
+                >
+                  Cancel
+                </Button>
+              </div>
+              {promoCode && (
+                <p className="text-xs text-muted-foreground">
+                  Code &quot;{promoCode}&quot; will be applied at checkout
+                </p>
+              )}
+              {promoError && (
+                <p className="text-xs text-red-500">{promoError}</p>
+              )}
+            </div>
+          )}
         </div>
       </main>
 

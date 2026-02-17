@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, plan } = body;
+    const { action, plan, promoCode } = body;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     if (action === "checkout") {
@@ -87,11 +87,37 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Look up promotion code in Stripe if provided
+      let promotionCodeId: string | undefined;
+      if (promoCode && typeof promoCode === "string") {
+        try {
+          const promoCodes = await stripe.promotionCodes.list({
+            code: promoCode.toUpperCase(),
+            active: true,
+            limit: 1,
+          });
+          if (promoCodes.data.length > 0) {
+            promotionCodeId = promoCodes.data[0].id;
+          } else {
+            return NextResponse.json(
+              { error: "Invalid or expired promo code." },
+              { status: 400 }
+            );
+          }
+        } catch {
+          return NextResponse.json(
+            { error: "Failed to validate promo code." },
+            { status: 400 }
+          );
+        }
+      }
+
       const session = await createCheckoutSession(
         customerId,
         priceId,
         `${appUrl}/dashboard?success=true`,
-        `${appUrl}/pricing?canceled=true`
+        `${appUrl}/pricing?canceled=true`,
+        promotionCodeId
       );
 
       return NextResponse.json({ success: true, data: { url: session.url } });

@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File | null;
     const jdText = formData.get("jdText") as string | null;
     const resumeId = formData.get("resumeId") as string | null;
+    const companyName = formData.get("companyName") as string | null;
 
     if (!jdText || jdText.trim().length < 50) {
       return NextResponse.json(
@@ -107,29 +108,70 @@ export async function POST(req: NextRequest) {
       mimeType,
     });
 
-    // Detect company ATS from job description
+    // Detect company ATS from explicit company name or job description
+    // Priority: explicit company name > JD-based detection
     let detectedCompany: string | null = null;
     let detectedAts: string | null = null;
     let atsTips: string[] = [];
     try {
       const companies = await prisma.atsCompany.findMany();
-      const jdLower = jdText.toLowerCase();
-      for (const company of companies) {
-        if (
-          jdLower.includes(company.companyName.toLowerCase()) ||
-          (company.companyDomain && jdLower.includes(company.companyDomain.toLowerCase()))
-        ) {
-          detectedCompany = company.companyName;
-          detectedAts = company.atsSystem;
 
-          // Fetch ATS tips
+      // 1. Try explicit company name first (highest priority)
+      if (companyName && companyName.trim().length > 0) {
+        const trimmedName = companyName.trim();
+        const matchedByName = companies.find(
+          (c) => c.companyName.toLowerCase() === trimmedName.toLowerCase()
+        );
+
+        if (matchedByName) {
+          detectedCompany = matchedByName.companyName;
+          detectedAts = matchedByName.atsSystem;
+
           const atsSystem = await prisma.atsSystem.findFirst({
-            where: { name: company.atsSystem },
+            where: { name: matchedByName.atsSystem },
           });
           if (atsSystem?.tips) {
             atsTips = JSON.parse(atsSystem.tips);
           }
-          break;
+        } else {
+          // Company name provided but not found in DB - add it for future reference
+          try {
+            await prisma.atsCompany.create({
+              data: {
+                companyName: trimmedName,
+                atsSystem: "Unknown",
+                verified: false,
+              },
+            });
+          } catch (createErr) {
+            // Ignore duplicate or creation errors (non-fatal)
+            console.error("ATS company creation error (non-fatal):", createErr);
+          }
+          detectedCompany = trimmedName;
+          detectedAts = "Unknown";
+        }
+      }
+
+      // 2. Fall back to JD-based detection if no explicit company match
+      if (!detectedCompany) {
+        const jdLower = jdText.toLowerCase();
+        for (const company of companies) {
+          if (
+            jdLower.includes(company.companyName.toLowerCase()) ||
+            (company.companyDomain && jdLower.includes(company.companyDomain.toLowerCase()))
+          ) {
+            detectedCompany = company.companyName;
+            detectedAts = company.atsSystem;
+
+            // Fetch ATS tips
+            const atsSystem = await prisma.atsSystem.findFirst({
+              where: { name: company.atsSystem },
+            });
+            if (atsSystem?.tips) {
+              atsTips = JSON.parse(atsSystem.tips);
+            }
+            break;
+          }
         }
       }
     } catch (e) {

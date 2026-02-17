@@ -1,22 +1,86 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Upload, FileText, Loader2, AlertCircle } from "lucide-react";
+import { Upload, FileText, Loader2, AlertCircle, Building2 } from "lucide-react";
+
+interface CompanySuggestion {
+  id: number;
+  companyName: string;
+  atsSystem: string;
+}
 
 export default function AnalyzePage() {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [jdText, setJdText] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [companySuggestions, setCompanySuggestions] = useState<CompanySuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const companyInputRef = useRef<HTMLDivElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Close suggestions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (companyInputRef.current && !companyInputRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Debounced company search
+  const searchCompanies = useCallback((query: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (query.length < 2) {
+      setCompanySuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/ats/companies?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+          setCompanySuggestions(data.data);
+          setShowSuggestions(true);
+        } else {
+          setCompanySuggestions([]);
+          setShowSuggestions(false);
+        }
+      } catch {
+        setCompanySuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+  }, []);
+
+  const handleCompanyChange = (value: string) => {
+    setCompanyName(value);
+    searchCompanies(value);
+  };
+
+  const selectCompany = (company: CompanySuggestion) => {
+    setCompanyName(company.companyName);
+    setShowSuggestions(false);
+    setCompanySuggestions([]);
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -68,6 +132,7 @@ export default function AnalyzePage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("jdText", jdText);
+      formData.append("companyName", companyName);
 
       const res = await fetch("/api/scan", { method: "POST", body: formData });
       const data = await res.json();
@@ -175,6 +240,48 @@ export default function AnalyzePage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Company Name (Optional) */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              3. Company Name (Optional)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div ref={companyInputRef} className="relative">
+              <Input
+                placeholder="e.g., Google, Amazon, Microsoft..."
+                value={companyName}
+                onChange={(e) => handleCompanyChange(e.target.value)}
+                onFocus={() => {
+                  if (companySuggestions.length > 0) setShowSuggestions(true);
+                }}
+              />
+              {showSuggestions && companySuggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {companySuggestions.map((company) => (
+                    <button
+                      key={company.id}
+                      type="button"
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 flex items-center justify-between text-sm"
+                      onClick={() => selectCompany(company)}
+                    >
+                      <span className="font-medium">{company.companyName}</span>
+                      <span className="text-muted-foreground text-xs">
+                        ATS: {company.atsSystem}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Help us detect the exact ATS system. If not found, we&apos;ll add it to our database.
+            </p>
+          </CardContent>
+        </Card>
 
         <div className="mt-8 text-center">
           <Button

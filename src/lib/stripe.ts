@@ -54,16 +54,27 @@ export async function createCheckoutSession(
   customerId: string,
   priceId: string,
   successUrl: string,
-  cancelUrl: string
+  cancelUrl: string,
+  promotionCodeId?: string
 ) {
-  return stripe.checkout.sessions.create({
+  const params: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
     mode: "subscription",
     success_url: successUrl,
     cancel_url: cancelUrl,
-  });
+  };
+
+  if (promotionCodeId) {
+    // Apply a specific promotion code
+    params.discounts = [{ promotion_code: promotionCodeId }];
+  } else {
+    // Allow users to enter promo codes on the Stripe checkout page
+    params.allow_promotion_codes = true;
+  }
+
+  return stripe.checkout.sessions.create(params);
 }
 
 export async function createCustomerPortalSession(
