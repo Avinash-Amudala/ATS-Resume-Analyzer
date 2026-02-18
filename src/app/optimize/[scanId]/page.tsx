@@ -402,10 +402,24 @@ export default function OptimizePage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {optimized.skills.categoriesRewritten?.map((skill, i) => (
-                        <Badge key={i} variant="outline">{skill}</Badge>
-                      ))}
+                    <div className="space-y-2">
+                      {optimized.skills.categoriesRewritten?.map((skill, i) => {
+                        const colonIdx = skill.indexOf(":");
+                        if (colonIdx > 0 && colonIdx < 40) {
+                          const category = skill.substring(0, colonIdx).trim();
+                          const items = skill.substring(colonIdx + 1).trim();
+                          return (
+                            <div key={i} className="text-sm bg-green-50 p-2 rounded border border-green-200">
+                              <span className="font-semibold">{category}:</span> {items}
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={i} className="text-sm bg-green-50 p-2 rounded border border-green-200">
+                            {skill}
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>

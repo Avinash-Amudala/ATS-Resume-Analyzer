@@ -228,8 +228,24 @@ function parseEducation(text: string): ResumeEducation[] {
 
 function parseSkills(text: string): string[] {
   if (!text) return [];
+
+  // First try to detect "Category: items" format (line-based)
+  const lines = text.split("\n").map((l) => l.replace(/^[•●▪◦]\s*/, "").trim()).filter((l) => l.length > 0);
+
+  // If any line contains ":" it's likely a categorized format — keep as lines
+  const hasCategoryFormat = lines.some((l) => {
+    const ci = l.indexOf(":");
+    return ci > 0 && ci < 40;
+  });
+
+  if (hasCategoryFormat) {
+    // Return each line as a skill category, filter out garbage
+    return lines.filter((l) => l.length > 2 && l.length < 200 && !/^\d+\s+of\s+\d+/i.test(l));
+  }
+
+  // Fallback: split by common delimiters
   return text
-    .split(/[,\n•●|]/)
+    .split(/[,\n•●]/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0 && s.length < 100);
 }
@@ -239,15 +255,27 @@ function parseProjects(text: string): ResumeProject[] {
   const blocks = text.split(/\n(?=[A-Z])/);
   const projects: ResumeProject[] = [];
 
+  // Filter for page markers like "- 1 of 2 --", "Page 1", etc.
+  const isPageMarker = (line: string): boolean => {
+    const t = line.replace(/^[•\-●▪◦]\s*/, "").trim();
+    return /^\d+\s+of\s+\d+/i.test(t) || /^-?\s*\d+\s+of\s+\d+\s*-*$/i.test(t) || /^page\s+\d+/i.test(t);
+  };
+
   for (const block of blocks) {
     const lines = block.split("\n").filter((l) => l.trim());
     if (lines.length === 0) continue;
+
+    // Skip entire block if first line looks like a page marker
+    if (isPageMarker(lines[0])) continue;
+
+    const bullets = lines.slice(1)
+      .filter((l) => (l.trim().startsWith("•") || l.trim().startsWith("-")) && !isPageMarker(l));
 
     projects.push({
       name: lines[0]?.trim() || "",
       description: lines[1]?.trim() || "",
       technologies: [],
-      bullets: lines.slice(1).filter((l) => l.trim().startsWith("•") || l.trim().startsWith("-")),
+      bullets,
     });
   }
 

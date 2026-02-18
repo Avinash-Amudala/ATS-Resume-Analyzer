@@ -20,9 +20,16 @@ function mergeOptimization(
   }
 
   if (Array.isArray(optimized.experience)) {
-    merged.experience = (merged.experience || []).map((exp) => {
-      const opt = (optimized.experience as Array<{ company: string; bulletsRewritten?: string[] }>)
-        .find((o) => o.company === exp.company);
+    const optExp = optimized.experience as Array<{ company: string; bulletsRewritten?: string[] }>;
+    merged.experience = (merged.experience || []).map((exp, idx) => {
+      // Try exact match first, then fuzzy, then index-based fallback
+      const opt = optExp.find((o) => o.company === exp.company)
+        || optExp.find(
+          (o) => o.company?.toLowerCase().includes(exp.company?.toLowerCase().split(",")[0]?.trim() || "???")
+                || exp.company?.toLowerCase().includes(o.company?.toLowerCase().split(",")[0]?.trim() || "???")
+        )
+        || (idx < optExp.length ? optExp[idx] : null);
+
       if (opt?.bulletsRewritten && Array.isArray(opt.bulletsRewritten)) {
         return { ...exp, bullets: opt.bulletsRewritten };
       }

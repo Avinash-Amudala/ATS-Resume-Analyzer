@@ -8,6 +8,7 @@ import {
 } from "@/lib/ai/prompts";
 import { parseStructuredResume } from "@/lib/resume/structured";
 import { runATSScoring } from "@/lib/scoring";
+import { extractKeywords, matchKeywords } from "@/lib/scoring/keyword-matching";
 import type { OptimizationResult, StructuredResume } from "@/types";
 
 /**
@@ -24,8 +25,15 @@ function mergeForScoring(
   }
 
   if (Array.isArray(optimized.experience)) {
-    merged.experience = (merged.experience || []).map((exp) => {
-      const opt = optimized.experience.find((o) => o.company === exp.company);
+    merged.experience = (merged.experience || []).map((exp, idx) => {
+      // Try exact match first, then fuzzy match, then index-based fallback
+      const opt = optimized.experience.find(
+        (o) => o.company === exp.company
+      ) || optimized.experience.find(
+        (o) => o.company?.toLowerCase().includes(exp.company?.toLowerCase().split(",")[0]?.trim() || "???")
+              || exp.company?.toLowerCase().includes(o.company?.toLowerCase().split(",")[0]?.trim() || "???")
+      ) || (idx < optimized.experience.length ? optimized.experience[idx] : null);
+
       if (opt?.bulletsRewritten?.length) {
         return { ...exp, bullets: opt.bulletsRewritten };
       }
@@ -42,6 +50,7 @@ function mergeForScoring(
 
 /**
  * Re-build the resume text from structured data for scoring.
+ * Outputs in a format that maximizes keyword matching accuracy.
  */
 function structuredToText(resume: StructuredResume): string {
   const parts: string[] = [];
@@ -68,7 +77,10 @@ function structuredToText(resume: StructuredResume): string {
     for (const exp of resume.experience) {
       parts.push(`${exp.company} | ${exp.title} | ${exp.startDate} - ${exp.endDate}`);
       for (const bullet of exp.bullets) {
-        parts.push(`• ${bullet.replace(/^[•\-●]\s*/, "")}`);
+        const clean = bullet.replace(/^[•\-●]\s*/, "").trim();
+        if (clean && !/^\d+\s+of\s+\d+/i.test(clean)) {
+          parts.push(`• ${clean}`);
+        }
       }
       parts.push("");
     }
@@ -83,10 +95,12 @@ function structuredToText(resume: StructuredResume): string {
     parts.push("");
   }
 
-  // Skills
+  // Skills — output each category on its own line for better keyword matching
   if (resume.skills?.length) {
-    parts.push("SKILLS");
-    parts.push(resume.skills.join(", "));
+    parts.push("TECHNICAL SKILLS");
+    for (const skill of resume.skills) {
+      parts.push(skill);
+    }
     parts.push("");
   }
 
@@ -95,8 +109,12 @@ function structuredToText(resume: StructuredResume): string {
     parts.push("PROJECTS");
     for (const proj of resume.projects) {
       parts.push(proj.name);
+      if (proj.description) parts.push(proj.description);
       for (const bullet of proj.bullets) {
-        parts.push(`• ${bullet.replace(/^[•\-●]\s*/, "")}`);
+        const clean = bullet.replace(/^[•\-●]\s*/, "").trim();
+        if (clean && !/^\d+\s+of\s+\d+/i.test(clean)) {
+          parts.push(`• ${clean}`);
+        }
       }
       parts.push("");
     }
@@ -156,11 +174,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Scan not found." }, { status: 404 });
     }
 
-    const missingKeywords = scan.missingKeywords
-      ? JSON.parse(scan.missingKeywords).map(
-          (k: { keyword: string }) => k.keyword
-        )
-      : [];
+    // Re-extract all JD keywords and find which ones are missing from the resume
+    // This is more accurate than relying on stored scan data which may be stale
+    const jdKeywords = extractKeywords(scan.jdText);
+    const matched = matchKeywords(scan.resume.rawText, jdKeywords);
+    const missingKeywords = matched
+      .filter((k) => !k.found)
+      .map((k) => k.keyword);
+
+    // Also include any stored missing keywords as fallback
+    if (scan.missingKeywords) {
+      try {
+        const stored = JSON.parse(scan.missingKeywords) as Array<{ keyword: string }>;
+        for (const k of stored) {
+          if (!missingKeywords.includes(k.keyword.toLowerCase())) {
+            missingKeywords.push(k.keyword);
+          }
+        }
+      } catch { /* ignore parse errors */ }
+    }
 
     const userPrompt = buildOptimizationUserPrompt(
       scan.resume.rawText,

@@ -271,6 +271,10 @@ export async function generateDocx(
               for (const bullet of exp.bullets) {
                 const cleanBullet = bullet.replace(/^[•\-●▪◦]\s*/, "").trim();
                 if (!cleanBullet) continue;
+                // Skip page markers
+                if (/^\d+\s+of\s+\d+/i.test(cleanBullet)) continue;
+                if (/^-?\s*\d+\s+of\s+\d+\s*-*$/i.test(cleanBullet)) continue;
+                if (/^page\s+\d+/i.test(cleanBullet)) continue;
                 children.push(
                   new Paragraph({
                     children: [
@@ -360,20 +364,53 @@ export async function generateDocx(
       case "skills":
         if (resumeData.skills?.length > 0) {
           children.push(createSectionHeader("TECHNICAL SKILLS", s));
-          const skillText = resumeData.skills.join("  |  ");
-          children.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: skillText,
-                  font: s.font.name,
-                  size: s.font.size,
-                  color: s.colors.body,
-                }),
-              ],
-              spacing: { after: s.spacing.afterSection, line: 260 },
-            })
-          );
+
+          for (const skill of resumeData.skills) {
+            const cleanSkill = skill.replace(/^[•\-●▪◦]\s*/, "").trim();
+            if (!cleanSkill) continue;
+
+            // Check if it's a "Category: items" format
+            const colonIdx = cleanSkill.indexOf(":");
+            if (colonIdx > 0 && colonIdx < 40) {
+              const category = cleanSkill.substring(0, colonIdx).trim();
+              const items = cleanSkill.substring(colonIdx + 1).trim();
+              children.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `${category}: `,
+                      font: s.font.name,
+                      size: s.font.size,
+                      bold: true,
+                      color: s.colors.body,
+                    }),
+                    new TextRun({
+                      text: items,
+                      font: s.font.name,
+                      size: s.font.size,
+                      color: s.colors.body,
+                    }),
+                  ],
+                  spacing: { before: 20, after: 20, line: 240 },
+                })
+              );
+            } else {
+              // Plain skill string — render as single line
+              children.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: cleanSkill,
+                      font: s.font.name,
+                      size: s.font.size,
+                      color: s.colors.body,
+                    }),
+                  ],
+                  spacing: { before: 20, after: 20, line: 240 },
+                })
+              );
+            }
+          }
         }
         break;
 
@@ -412,6 +449,10 @@ export async function generateDocx(
               for (const bullet of proj.bullets) {
                 const cleanBullet = bullet.replace(/^[•\-●▪◦]\s*/, "").trim();
                 if (!cleanBullet) continue;
+                // Skip page markers like "- 1 of 2 --", "Page 1", etc.
+                if (/^\d+\s+of\s+\d+/i.test(cleanBullet)) continue;
+                if (/^-?\s*\d+\s+of\s+\d+\s*-*$/i.test(cleanBullet)) continue;
+                if (/^page\s+\d+/i.test(cleanBullet)) continue;
                 children.push(
                   new Paragraph({
                     children: [
